@@ -94,4 +94,4 @@ function Show-Link-Screen {
 }
 
 # Run the form
-$form.ShowDialog()
+$form.ShowDialog() 
