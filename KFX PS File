@@ -1,0 +1,97 @@
+# PowerShell script for custom UI with ASCII art and menu
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+# Function to create a new form
+function Create-Form {
+    $form = New-Object System.Windows.Forms.Form
+    $form.StartPosition = "CenterScreen"
+    $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+    $form.ControlBox = $false
+    $form.BackColor = [System.Drawing.Color]::Black
+    $form.Size = New-Object System.Drawing.Size(600, 400)
+    return $form
+}
+
+# Create main form
+$form = Create-Form
+$form.Text = "KFX | made by @zpat"  # Set the title
+
+# ASCII Art Label
+$asciiArt = @"
+   ██╗  ██╗███████╗██╗  ██╗
+   ██║ ██╔╝██╔════╝╚██╗██╔╝
+   █████╔╝ █████╗   ╚███╔╝ 
+   ██╔═██╗ ██╔══╝   ██╔██╗ 
+   ██║  ██╗██║     ██╔╝ ██╗
+   ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝
+"@
+
+$labelArt = New-Object System.Windows.Forms.Label
+$labelArt.Text = $asciiArt
+$labelArt.ForeColor = [System.Drawing.Color]::White
+$labelArt.Font = New-Object System.Drawing.Font("Consolas", 12, [System.Drawing.FontStyle]::Regular)
+$labelArt.AutoSize = $true
+$labelArt.Location = New-Object System.Drawing.Point(50, 10)
+$form.Controls.Add($labelArt)
+
+# Button functions and order defined manually
+$buttons = @(
+    @{ Text = "Graphics Pack"; Action = { Show-Link-Screen "Graphics Pack" } },
+    @{ Text = "Sound Pack"; Action = { Show-Link-Screen "Sound Pack" } },
+    @{ Text = "Reshade"; Action = { Show-Link-Screen "Reshade" } },
+    @{ Text = "FiveM Clean"; Action = { Show-Link-Screen "FiveM Clean" } }
+)
+
+$y = 150
+foreach ($button in $buttons) {
+    $newButton = New-Object System.Windows.Forms.Button
+    $newButton.Text = $button.Text
+    $newButton.Size = New-Object System.Drawing.Size(120, 40)
+    $newButton.Location = New-Object System.Drawing.Point(50, $y)
+    $newButton.BackColor = [System.Drawing.Color]::White
+    $newButton.Add_Click($button.Action)
+    $form.Controls.Add($newButton)
+    $y += 50
+}
+
+# Exit Button (Top Right Corner)
+$exitButton = New-Object System.Windows.Forms.Button
+$exitButton.Text = "Exit"
+$exitButton.Size = New-Object System.Drawing.Size(80, 30)
+$exitButton.Location = New-Object System.Drawing.Point(500, 10)
+$exitButton.BackColor = [System.Drawing.Color]::Red
+$exitButton.ForeColor = [System.Drawing.Color]::White
+$exitButton.Add_Click({ $form.Close() })
+$form.Controls.Add($exitButton)
+
+# Function to show link screen
+function Show-Link-Screen {
+    param ($title)
+
+    $linkForm = Create-Form
+    $linkForm.Text = $title
+
+    $backButton = New-Object System.Windows.Forms.Button
+    $backButton.Text = "Back"
+    $backButton.Size = New-Object System.Drawing.Size(80, 30)
+    $backButton.Location = New-Object System.Drawing.Point(500, 10)
+    $backButton.BackColor = [System.Drawing.Color]::Red
+    $backButton.ForeColor = [System.Drawing.Color]::White
+    $backButton.Add_Click({ $linkForm.Close() })
+    $linkForm.Controls.Add($backButton)
+
+    $linkTextBox = New-Object System.Windows.Forms.TextBox
+    $linkTextBox.Size = New-Object System.Drawing.Size(500, 30)
+    $linkTextBox.Location = New-Object System.Drawing.Point(50, 150)
+    $linkTextBox.PlaceholderText = "Paste your link here..."
+    $linkForm.Controls.Add($linkTextBox)
+
+    $linkForm.ShowDialog()
+}
+
+# Run the form
+$form.ShowDialog()
