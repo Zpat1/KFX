@@ -38,12 +38,150 @@ $labelArt.AutoSize = $true
 $labelArt.Location = New-Object System.Drawing.Point(50, 10)
 $form.Controls.Add($labelArt)
 
+# Download Progress Bar
+$progressBar = New-Object System.Windows.Forms.ProgressBar
+$progressBar.Size = New-Object System.Drawing.Size(400, 20)
+$progressBar.Location = New-Object System.Drawing.Point(100, 300)
+$progressBar.Style = 'Continuous'
+$progressBar.Visible = $false
+$form.Controls.Add($progressBar)
+
+# Function to write error messages to the bottom-right corner of the UI
+function Write-Error-Message {
+    param ($message)
+
+    # Define label properties
+    $errorLabel = New-Object System.Windows.Forms.Label
+    $errorLabel.Text = $message
+    $errorLabel.ForeColor = [System.Drawing.Color]::Red
+    $errorLabel.Font = New-Object System.Drawing.Font("Arial", 10, [System.Drawing.FontStyle]::Bold)
+    $errorLabel.AutoSize = $true
+    $errorLabel.Location = New-Object System.Drawing.Point(400, 360) # Bottom-right corner
+    $form.Controls.Add($errorLabel)
+    $form.Refresh()
+}
+
+function Graphics-Pack {
+    try {
+        # Create a new form for download progress
+        $progressForm = Create-Form
+        $progressForm.Text = "KFX | Made by Zpat | Graphics Pack"
+
+        # Add a label to show progress
+        $progressLabel = New-Object System.Windows.Forms.Label
+        $progressLabel.Text = "Downloading..."
+        $progressLabel.ForeColor = [System.Drawing.Color]::White
+        $progressLabel.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]::Regular)
+        $progressLabel.AutoSize = $true
+        $progressLabel.Location = New-Object System.Drawing.Point(50, 50)
+        $progressForm.Controls.Add($progressLabel)
+
+        # Add a progress bar to show download status
+        $progressBar = New-Object System.Windows.Forms.ProgressBar
+        $progressBar.Size = New-Object System.Drawing.Size(400, 20)
+        $progressBar.Location = New-Object System.Drawing.Point(50, 100)
+        $progressBar.Style = 'Continuous'
+        $progressBar.Visible = $true
+        $progressForm.Controls.Add($progressBar)
+        
+        # Show progress form
+        $progressForm.Show()
+
+        # Define the download path for the file
+        $downloadPath = [System.IO.Path]::Combine($env:TEMP, "download.rar")
+
+        # Check clipboard for download link
+        $clipboard = Get-Clipboard
+        if (-not $clipboard -or ($clipboard -notmatch "https?://")) {
+            Write-Host "Download Link Not Recognized"
+            $progressForm.Close()
+            return
+        }
+
+        # Download the file to the temporary folder
+        try {
+            Invoke-WebRequest -Uri $clipboard -OutFile $downloadPath -ErrorAction Stop
+            Write-Host "Download Started: $downloadPath"
+        } catch {
+            Write-Host "Failed to download file: $_"
+            $progressForm.Close()
+            return
+        }
+
+        # Check if the file was downloaded successfully
+        if (-not (Test-Path -Path $downloadPath)) {
+            Write-Host "Download Failed"
+            $progressForm.Close()
+            return
+        }
+
+        Write-Host "Download Complete: $downloadPath"
+
+# Delete the KFX folder if it exists
+Remove-Item -Recurse -Force "$env:TEMP\KFX"
+
+# Create the KFX folder again
+New-Item -ItemType Directory -Path "$env:TEMP\KFX" | Out-Null
+
+# Extract
+& "$env:ProgramFiles\WinRAR\WinRAR.exe" x -o+ "$env:TEMP\download.rar" "$env:TEMP\KFX\"
+
+# Delete old citizen
+Remove-Item -Recurse -Force "$env:LOCALAPPDATA\FiveM\FiveM.app\citizen"
+
+# Wait 
+Start-Sleep -Seconds 1
+
+# Recursively search for a folder named "citizen" within KFX
+$citizenFolder = Get-ChildItem -Path "$env:TEMP\KFX" -Recurse -Directory | Where-Object { $_.Name -eq "citizen" }
+
+# If the "citizen" folder is found, copy it to the FiveM app directory
+if ($citizenFolder) {
+    Copy-Item -Path $citizenFolder.FullName -Destination "$env:LOCALAPPDATA\FiveM\FiveM.app" -Recurse -Force
+    Write-Host "Citizen folder copied successfully."
+} else {
+    Write-Host "Citizen folder not found."
+}
+
+# Wait
+Start-Sleep -Seconds 1
+
+# Delete the KFX folder if it exists
+Remove-Item -Recurse -Force "$env:TEMP\KFX"
+Remove-Item -Recurse -Force "$env:TEMP\download.rar"
+
+        # Close the progress form once download is done
+        $progressForm.Close()
+    } catch {
+        Write-Host $_.Exception.Message
+        $progressForm.Close()
+    }
+}
+
+
+
+
+# Placeholder for Sound-Pack function (no functionality added)
+function Sound-Pack {
+    Write-Error-Message "Functionality not yet implemented."
+}
+
+# Placeholder for Reshade function (no functionality added)
+function Reshade {
+    Write-Error-Message "Functionality not yet implemented."
+}
+
+# Placeholder for FiveM Cleanup function (no functionality added)
+function FiveM-Clean {
+    Write-Error-Message "Functionality not yet implemented."
+}
+
 # Button functions and order defined manually
 $buttons = @(
-    @{ Text = "Graphics Pack"; Action = { Show-Link-Screen "Graphics Pack" } },
-    @{ Text = "Sound Pack"; Action = { Show-Link-Screen "Sound Pack" } },
-    @{ Text = "Reshade"; Action = { Show-Link-Screen "Reshade" } },
-    @{ Text = "FiveM Clean"; Action = { Show-Link-Screen "FiveM Clean" } }
+    @{ Text = "Graphics Pack"; Action = { Graphics-Pack } },
+    @{ Text = "Sound Pack"; Action = { Sound-Pack } },
+    @{ Text = "Reshade"; Action = { Reshade } },
+    @{ Text = "FiveM Clean"; Action = { FiveM-Clean } }
 )
 
 $y = 150
@@ -58,7 +196,7 @@ foreach ($button in $buttons) {
     $y += 50
 }
 
-# Exit Button (Top Right Corner)
+# Exit Button
 $exitButton = New-Object System.Windows.Forms.Button
 $exitButton.Text = "Exit"
 $exitButton.Size = New-Object System.Drawing.Size(80, 30)
@@ -67,31 +205,6 @@ $exitButton.BackColor = [System.Drawing.Color]::Red
 $exitButton.ForeColor = [System.Drawing.Color]::White
 $exitButton.Add_Click({ $form.Close() })
 $form.Controls.Add($exitButton)
-
-# Function to show link screen
-function Show-Link-Screen {
-    param ($title)
-
-    $linkForm = Create-Form
-    $linkForm.Text = $title
-
-    $backButton = New-Object System.Windows.Forms.Button
-    $backButton.Text = "Back"
-    $backButton.Size = New-Object System.Drawing.Size(80, 30)
-    $backButton.Location = New-Object System.Drawing.Point(500, 10)
-    $backButton.BackColor = [System.Drawing.Color]::Red
-    $backButton.ForeColor = [System.Drawing.Color]::White
-    $backButton.Add_Click({ $linkForm.Close() })
-    $linkForm.Controls.Add($backButton)
-
-    $linkTextBox = New-Object System.Windows.Forms.TextBox
-    $linkTextBox.Size = New-Object System.Drawing.Size(500, 30)
-    $linkTextBox.Location = New-Object System.Drawing.Point(50, 150)
-    $linkTextBox.PlaceholderText = "Paste your link here..."
-    $linkForm.Controls.Add($linkTextBox)
-
-    $linkForm.ShowDialog()
-}
 
 # Run the form
 $form.ShowDialog()
