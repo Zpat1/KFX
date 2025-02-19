@@ -18,7 +18,7 @@ function Create-Form {
 
 # Create main form
 $form = Create-Form
-$form.Text = "KFX | made by @zpat"  # Set the title
+$form.Text = "KFX | Made by Zpat"  # Set the title
 
 # ASCII Art Label
 $asciiArt = @"
@@ -27,7 +27,7 @@ $asciiArt = @"
    █████╔╝ █████╗   ╚███╔╝ 
    ██╔═██╗ ██╔══╝   ██╔██╗ 
    ██║  ██╗██║     ██╔╝ ██╗
-   ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝
+   ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ by Zpat
 "@
 
 $labelArt = New-Object System.Windows.Forms.Label
