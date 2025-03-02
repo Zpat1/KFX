@@ -27,7 +27,7 @@ $asciiArt = @"
    █████╔╝ █████╗   ╚███╔╝ 
    ██╔═██╗ ██╔══╝   ██╔██╗ 
    ██║  ██╗██║     ██╔╝ ██╗
-   ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ by Zpat
+   ╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ 
 "@
 
 $labelArt = New-Object System.Windows.Forms.Label
@@ -126,11 +126,49 @@ New-Item -ItemType Directory -Path "$env:TEMP\KFX" | Out-Null
 # Extract
 & "$env:ProgramFiles\WinRAR\WinRAR.exe" x -o+ "$env:TEMP\download.rar" "$env:TEMP\KFX\"
 
-# Delete old citizen
-Remove-Item -Recurse -Force "$env:LOCALAPPDATA\FiveM\FiveM.app\citizen"
 
-# Wait 
-Start-Sleep -Seconds 1
+
+# Loop until we find either 'citizen' or 'common' folder in %TEMP%\KFX
+while ($true) {
+    # Search for 'citizen' and 'common' folders in all subdirectories of %TEMP%\KFX
+    $kfxCitizenFolder = Get-ChildItem -Path "$env:TEMP\KFX" -Recurse -Directory | Where-Object { $_.Name -eq "citizen" }
+    $kfxCommonFolder = Get-ChildItem -Path "$env:TEMP\KFX" -Recurse -Directory | Where-Object { $_.Name -eq "common" }
+
+    # If "citizen" folder is found in KFX, delete and replace it in FiveM
+    if ($kfxCitizenFolder) {
+        Write-Host "'citizen' folder found in KFX. Deleting old 'citizen' folder in FiveM app..."
+        Remove-Item -Recurse -Force "$env:LOCALAPPDATA\FiveM\FiveM.app\citizen"
+        Write-Host "'citizen' folder deleted from FiveM app."
+        Write-Host "Copying new 'citizen' folder to FiveM app..."
+        Copy-Item -Path $kfxCitizenFolder.FullName -Destination "$env:LOCALAPPDATA\FiveM\FiveM.app" -Recurse -Force
+        Write-Host "'citizen' folder successfully replaced in FiveM app."
+        break
+    }
+    # If "common" folder is found inside the "citizen" in KFX, delete and replace it in FiveM
+    elseif ($kfxCommonFolder) {
+        Write-Host "'common' folder found inside 'citizen' in KFX. Deleting old 'common' folder inside 'citizen' in FiveM app..."
+        Remove-Item -Recurse -Force "$env:LOCALAPPDATA\FiveM\FiveM.app\citizen\common"
+        Write-Host "'common' folder deleted from FiveM app."
+
+        # Copy the entire 'common' folder from KFX to the 'citizen' folder in FiveM
+        Write-Host "Copying 'common' folder to 'citizen' in FiveM app..."
+        Copy-Item -Path $kfxCommonFolder.FullName -Destination "$env:LOCALAPPDATA\FiveM\FiveM.app\citizen" -Recurse -Force
+        Write-Host "'common' folder successfully replaced inside 'citizen' in FiveM app."
+        break
+    }
+
+    # If neither is found, wait for 1 second and check again
+    Write-Host "Neither 'citizen' nor 'common' folder found in KFX. Retrying in 1 second..."
+    Start-Sleep -Seconds 1
+}
+
+
+
+
+
+
+
+
 
 # Recursively search for a folder named "citizen" within KFX
 $citizenFolder = Get-ChildItem -Path "$env:TEMP\KFX" -Recurse -Directory | Where-Object { $_.Name -eq "citizen" }
@@ -161,19 +199,143 @@ Remove-Item -Recurse -Force "$env:TEMP\download.rar"
 
 
 
-# Placeholder for Sound-Pack function (no functionality added)
 function Sound-Pack {
-    Write-Error-Message "Functionality not yet implemented."
+    try {
+        # Create a new form for download progress
+        $progressForm = Create-Form
+        $progressForm.Text = "KFX | Made by Zpat | Sound Pack"
+
+        # Add a label to show progress
+        $progressLabel = New-Object System.Windows.Forms.Label
+        $progressLabel.Text = "Downloading..."
+        $progressLabel.ForeColor = [System.Drawing.Color]::White
+        $progressLabel.Font = New-Object System.Drawing.Font("Arial", 12, [System.Drawing.FontStyle]::Regular)
+        $progressLabel.AutoSize = $true
+        $progressLabel.Location = New-Object System.Drawing.Point(50, 50)
+        $progressForm.Controls.Add($progressLabel)
+
+        # Add a progress bar to show download status
+        $progressBar = New-Object System.Windows.Forms.ProgressBar
+        $progressBar.Size = New-Object System.Drawing.Size(400, 20)
+        $progressBar.Location = New-Object System.Drawing.Point(50, 100)
+        $progressBar.Style = 'Continuous'
+        $progressBar.Visible = $true
+        $progressForm.Controls.Add($progressBar)
+
+        # Show progress form
+        $progressForm.Show()
+
+        # Define the download path for the file
+        $downloadPath = [System.IO.Path]::Combine($env:TEMP, "download.rar")
+
+        # Check clipboard for download link
+        $clipboard = Get-Clipboard
+        if (-not $clipboard -or ($clipboard -notmatch "https?://")) {
+            Write-Host "Download Link Not Recognized"
+            $progressForm.Close()
+            return
+        }
+
+        # Download the file to the temporary folder
+        try {
+            Invoke-WebRequest -Uri $clipboard -OutFile $downloadPath -ErrorAction Stop
+            Write-Host "Download Started: $downloadPath"
+        } catch {
+            Write-Host "Failed to download file: $_"
+            $progressForm.Close()
+            return
+        }
+
+        # Check if the file was downloaded successfully
+        if (-not (Test-Path -Path $downloadPath)) {
+            Write-Host "Download Failed"
+            $progressForm.Close()
+            return
+        }
+
+        Write-Host "Download Complete: $downloadPath"
+
+        # Delete the KFX folder if it exists
+        Remove-Item -Recurse -Force "$env:TEMP\KFX"
+
+        # Create the KFX folder again
+        New-Item -ItemType Directory -Path "$env:TEMP\KFX" | Out-Null
+
+        # Extract
+        & "$env:ProgramFiles\WinRAR\WinRAR.exe" x -o+ "$env:TEMP\download.rar" "$env:TEMP\KFX\"
+
+while ($true) {
+    # Check if both files exist in KFX folder (recurse through subdirectories)
+    $weaponsPlayer = Get-ChildItem -Path "$env:TEMP\KFX" -Recurse -Filter "WEAPONS_PLAYER.rpf" -ErrorAction SilentlyContinue
+    $residentRpf = Get-ChildItem -Path "$env:TEMP\KFX" -Recurse -Filter "RESIDENT.rpf" -ErrorAction SilentlyContinue
+
+    # If both files are found, break the loop
+    if ($weaponsPlayer -and $residentRpf) {
+        break
+    }
 }
 
-# Placeholder for Reshade function (no functionality added)
+# Path to the CitizenFX.ini file
+$iniFilePath = "$env:LOCALAPPDATA\FiveM\FiveM.app\CitizenFX.ini"
+
+# Check if the CitizenFX.ini file exists
+if (Test-Path -Path $iniFilePath) {
+    # Read the file and find the line containing IVPath=
+    $ivPathLine = Get-Content -Path $iniFilePath | Where-Object { $_ -like "IVPath=*" }
+    
+    if ($ivPathLine) {
+        # Extract the GTA 5 folder path
+        $gta5Path = $ivPathLine -replace "IVPath=", ""
+        
+        # Construct the path to the 'sfx' folder
+        $sfxFolderPath = Join-Path -Path $gta5Path -ChildPath "x64\audio\sfx"
+        
+        # Output the 'sfx' folder path
+        Write-Host "The 'sfx' folder location is: $sfxFolderPath"
+    } else {
+        Write-Error "IVPath entry not found in the CitizenFX.ini file."
+    }
+} else {
+    Write-Error "CitizenFX.ini file not found at $iniFilePath"
+}
+
+Remove-Item -Path "$gta5Path\x64\audio\sfx\WEAPONS_PLAYER.rpf", "$gta5Path\x64\audio\sfx\RESIDENT.rpf" -Force
+
+Get-ChildItem -Path "$env:TEMP\KFX" -Recurse -Filter "WEAPONS_PLAYER.rpf" | ForEach-Object { Copy-Item -Path $_.FullName -Destination "$gta5Path\x64\audio\sfx" -Force }; Get-ChildItem -Path "$env:TEMP\KFX" -Recurse -Filter "RESIDENT.rpf" | ForEach-Object { Copy-Item -Path $_.FullName -Destination "$gta5Path\x64\audio\sfx" -Force }
+
+# Wait
+Start-Sleep -Seconds 1
+
+# Delete the KFX folder if it exists
+Remove-Item -Recurse -Force "$env:TEMP\KFX"
+Remove-Item -Recurse -Force "$env:TEMP\download.rar"
+
+        # Close the progress form once download is done
+        $progressForm.Close()
+
+    } catch {
+        Write-Host "Error: $($_.Exception.Message)"
+        if ($progressForm) { $progressForm.Close() }
+    }
+}
+
+
+
+
+
+
+
+# Placeholder for Reshade function
 function Reshade {
     Write-Error-Message "Functionality not yet implemented."
 }
 
-# Placeholder for FiveM Cleanup function (no functionality added)
+# Placeholder for FiveM Cleanup function
 function FiveM-Clean {
-    Write-Error-Message "Functionality not yet implemented."
+    Remove-Item "$env:LOCALAPPDATA\FiveM\FiveM.app\data\*" -Recurse -Force
+    Remove-Item "$env:LOCALAPPDATA\FiveM\FiveM.app\crashes\*" -Recurse -Force
+    Remove-Item "$env:LOCALAPPDATA\FiveM\FiveM.app\logs\*" -Recurse -Force
+
 }
 
 # Button functions and order defined manually
